@@ -11,7 +11,7 @@ export default function LoginScreen({ navigation }) {
   const regMail = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
 
   const handleLogin = async () => {
-    if(password.length<1 && email.length<1){
+    if(password.length<1 || email.length<1){
         ToastAndroid.showWithGravityAndOffset(
         "Los campos no pueden estar vacios",
         ToastAndroid.LONG,
