@@ -1,5 +1,10 @@
 import React, { useState } from "react";
-import { View, StyleSheet, ToastAndroid } from "react-native";
+import {
+  View,
+  StyleSheet,
+  ToastAndroid,
+  ActivityIndicator,
+} from "react-native";
 import { Input, Button, Text } from "react-native-elements";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../config/firebase";
@@ -8,11 +13,12 @@ export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const regMail = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
 
   const handleLogin = async () => {
-    if(password.length<1 || email.length<1){
-        ToastAndroid.showWithGravityAndOffset(
+    if (password.length < 1 && email.length < 1) {
+      ToastAndroid.showWithGravityAndOffset(
         "Los campos no pueden estar vacios",
         ToastAndroid.LONG,
         ToastAndroid.BOTTOM,
@@ -21,7 +27,7 @@ export default function LoginScreen({ navigation }) {
       );
       return;
     }
-    if (regMail.test(email)) {
+    if (!regMail.test(email)) {
       ToastAndroid.showWithGravityAndOffset(
         "La contraseña debe tenemos como minimo 8 caracteres, una mayuscula una minuscula y un caracter especial",
         ToastAndroid.LONG,
@@ -31,15 +37,14 @@ export default function LoginScreen({ navigation }) {
       );
       return;
     } else {
+      setIsLoading(true);
       try {
-        const userCredential = await signInWithEmailAndPassword(
-          auth,
-          email,
-          password
-        );
+        await signInWithEmailAndPassword(auth, email, password);
         navigation.replace("Home");
       } catch (error) {
         setError("Error al iniciar sesión: " + error.message);
+      } finally {
+        setIsLoading(false);
       }
     }
   };
@@ -61,11 +66,16 @@ export default function LoginScreen({ navigation }) {
         secureTextEntry
       />
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Button
-        title="Iniciar Sesión"
-        onPress={handleLogin}
-        containerStyle={styles.button}
-      />
+      {isLoading ? (
+        <ActivityIndicator size="large" color="#0000ff" />
+      ) : (
+        <Button
+          title="Iniciar Sesión"
+          onPress={handleLogin}
+          disabled={isLoading}
+          containerStyle={styles.button}
+        />
+      )}
       <Button
         title="Registrarse"
         type="outline"
