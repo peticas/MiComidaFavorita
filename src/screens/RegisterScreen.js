@@ -9,54 +9,74 @@ export default function RegisterScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confPassword, setConfPassword] = useState("");
+
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   const [error, setError] = useState("");
-  const regMail = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
-  const regPasswd = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/;
+
+  const validateEmail = (value) => {
+    const re = /\S+@\S+\.\S+/;
+    return re.test(value);
+  };
+
+  const validatePassword = (value, oValue) => {
+    const minLength = /.{8,}/;
+    const uppercase = /[A-Z]/;
+    const lowercase = /[a-z]/;
+    const number = /[0-9]/;
+    const specialChar = /[!@#$%^&*(),.?":{}|<>]/;
+    let msj = "";
+
+    if (value != oValue) {
+      msj = "La contraseña o coincide.\n";
+    } else {
+      if (!minLength.test(value)) {
+        msj += "La contraseña debe tener al menos 8 caracteres.\n";
+      }
+      if (!uppercase.test(value)) {
+        msj += "Debe incluir al menos una letra mayúscula.\n";
+      }
+      if (!lowercase.test(value)) {
+        msj += "Debe incluir al menos una letra minúscula.\n";
+      }
+      if (!number.test(value)) {
+        msj += "Debe incluir al menos un número.\n";
+      }
+      if (!specialChar.test(value)) {
+        msj += "Debe incluir al menos un carácter especial.";
+      }
+    }
+    return msj;
+  };
 
   const handleRegister = async () => {
-    //console.log(password.length);
-    if (regMail.test(email) === true) {
-        if(password == confPassword){
-            if (!regPasswd.test(password)) {
-                ToastAndroid.showWithGravityAndOffset(
-                "La contraseña debe tenemos como minimo 8 caracteres, una mayuscula una minuscula y un caracter especial",
-                ToastAndroid.LONG,
-                ToastAndroid.BOTTOM,
-                25,
-                50
-                );
-                return;
-            } else {
-                try {
-                const userCredential = await createUserWithEmailAndPassword(
-                    auth,
-                    email,
-                    password
-                );
-                navigation.replace("Home");
-                } catch (error) {
-                setError("Error al registrarse: " + error.message);
-                }
-            }
-        }else{
-            ToastAndroid.showWithGravityAndOffset(
-                "La contraseña no coincide",
-                ToastAndroid.LONG,
-                ToastAndroid.BOTTOM,
-                25,
-                50
-            );
-            return;
-        }
+    let valid = true;
+
+    if (!validateEmail(email)) {
+      setEmailError("Ingresa un email válido.");
+      valid = false;
     } else {
-      ToastAndroid.showWithGravityAndOffset(
-        "Debe Ingresar un correo valido",
-        ToastAndroid.LONG,
-        ToastAndroid.BOTTOM,
-        25,
-        50
-      );
-      return;
+      setEmailError("");
+    }
+
+    const pwdError = validatePassword(password, confPassword);
+    if (pwdError) {
+      setPasswordError(pwdError);
+      valid = false;
+    } else {
+      setPasswordError("");
+    }
+
+    if (valid) {
+      setIsLoading(true);
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        navigation.replace("Home");
+      } catch (error) {
+        setError("Error al iniciar sesión: " + error.message);
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -71,6 +91,7 @@ export default function RegisterScreen({ navigation }) {
         onChangeText={setEmail}
         autoCapitalize="none"
       />
+      {emailError ? <Text style={styles.error}>{emailError}</Text> : null}
       <Input
         placeholder="Contraseña"
         value={password}
@@ -83,7 +104,7 @@ export default function RegisterScreen({ navigation }) {
         onChangeText={setConfPassword}
         secureTextEntry
       />
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {passwordError ? <Text style={styles.error}>{passwordError}</Text> : null}
       <Button
         title="Registrarse"
         onPress={handleRegister}
@@ -95,6 +116,7 @@ export default function RegisterScreen({ navigation }) {
         onPress={() => navigation.navigate("Login")}
         containerStyle={styles.button}
       />
+      {error ? <Text style={styles.error}>{error}</Text> : null}
     </View>
   );
 }
