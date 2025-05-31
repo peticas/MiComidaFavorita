@@ -1,106 +1,106 @@
-import React, { useState } from "react";
-import {
-  View,
-  StyleSheet,
-  ToastAndroid,
-  ActivityIndicator,
-} from "react-native";
-import { Input, Button, Text } from "react-native-elements";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../config/firebase";
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, ActivityIndicator } from 'react-native';
+import { Input, Button, Text } from 'react-native-elements';
+import { auth } from '../config/firebase';
+import { signOut } from 'firebase/auth';
+import { db } from '../config/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
-export default function LoginScreen({ navigation }) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const regMail = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
+export default function HomeScreen({ navigation }) {
 
-  const handleLogin = async () => {
-    if (password.length < 1 && email.length < 1) {
-      ToastAndroid.showWithGravityAndOffset(
-        "Los campos no pueden estar vacios",
-        ToastAndroid.LONG,
-        ToastAndroid.BOTTOM,
-        25,
-        50
-      );
-      return;
-    }
-    if (!regMail.test(email)) {
-      ToastAndroid.showWithGravityAndOffset(
-        "La contraseña debe tenemos como minimo 8 caracteres, una mayuscula una minuscula y un caracter especial",
-        ToastAndroid.LONG,
-        ToastAndroid.BOTTOM,
-        25,
-        50
-      );
-      return;
-    } else {
-      setIsLoading(true);
-      try {
-        await signInWithEmailAndPassword(auth, email, password);
-        navigation.replace("Home");
-      } catch (error) {
-        setError("Error al iniciar sesión: " + error.message);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-  };
-  return (
-    <View style={styles.container}>
-      <Text h3 style={styles.title}>
-        Mi Comida Favorita
-      </Text>
-      <Input
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-      />
-      <Input
-        placeholder="Contraseña"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      {isLoading ? (
-        <ActivityIndicator size="large" color="#0000ff" />
-      ) : (
-        <Button
-          title="Iniciar Sesión"
-          onPress={handleLogin}
-          disabled={isLoading}
-          containerStyle={styles.button}
-        />
-      )}
-      <Button
-        title="Registrarse"
-        type="outline"
-        onPress={() => navigation.navigate("Register")}
-        containerStyle={styles.button}
-      />
-    </View>
-  );
+    const [profile, setProfile] = useState({
+        nombre: '',
+        apellido: '',
+        comidaFavorita: ''
+    });
+    const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
+        loadProfile();
+    }, []);
+
+    const loadProfile = async () => {
+        setIsLoading(true);
+        try {
+            const docRef = doc(db, 'usuarios', auth.currentUser.uid);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                setProfile(docSnap.data());
+            }
+        } catch (error) {
+            console.error('Error al cargar perfil:', error);
+        }finally{
+            setIsLoading(false);
+        }
+    };
+
+    const handleUpdate = async () => {
+        try {
+            await setDoc(doc(db, 'usuarios', auth.currentUser.uid), profile);
+            alert('Perfil actualizado exitosamente');
+        } catch (error) {
+            console.error('Error al actualizar perfil:', error);
+            alert('Error al actualizar perfil');
+        }
+    };
+    
+    const handleSignOut = async () => {
+        try {
+            await signOut(auth);
+            navigation.replace('Login');
+        } catch (error) {
+            console.error('Error al cerrar sesión:', error);
+        }
+    };
+
+    return (
+        <View style={styles.container}>  
+            <Text h4 style={styles.title}>Mi Perfil</Text>
+            <Input
+                placeholder="Nombre"
+                value={profile.nombre}
+                onChangeText={(text) => setProfile({ ...profile, nombre: text })}
+            />
+            <Input
+                placeholder="Apellido"
+                value={profile.apellido}
+                onChangeText={(text) => setProfile({ ...profile, apellido: text })}
+            />
+            <Input
+                placeholder="Comida Favorita"
+                value={profile.comidaFavorita}
+                onChangeText={(text) => setProfile({ ...profile, comidaFavorita: text })}
+            />
+            {isLoading ? (
+                <ActivityIndicator size="large" color="#0000ff" />
+                ) : (
+            <Button
+                title="Actualizar Perfil"
+                onPress={handleUpdate}
+                containerStyle={styles.button}
+            />
+            )}
+            <Button
+                title="Cerrar Sesión"
+                type="outline"
+                onPress={handleSignOut}
+                containerStyle={styles.button}
+            />
+            
+        </View>
+    );
 }
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    justifyContent: "center",
-  },
-  title: {
-    textAlign: "center",
-    marginBottom: 30,
-  },
-  button: {
-    marginVertical: 10,
-  },
-  error: {
-    color: "red",
-    textAlign: "center",
-    marginBottom: 10,
-  },
+    container: {
+        flex: 1,
+        padding: 20,
+    },
+    title: {
+        textAlign: 'center',
+        marginBottom: 30,
+    },
+    button: {
+        marginVertical: 10,
+    },
 });
